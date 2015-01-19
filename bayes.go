@@ -83,20 +83,20 @@ func findMax(scores []float64) (inx int, strict bool) {
 }
 
 // newClassData creates a new empty classData node.
-func newTopicHistogram() *topicHistogram {
-	return &topicHistogram{
-		Freqs: make(map[string]Histogram),
+func newTopicHistogram() *BayesData {
+	return &BayesData{
+		Freqs: make(map[string]FreqCount),
 	}
 }
 
 // getWordProb returns P(W|C_j) -- the probability of seeing
 // a particular word W in a document of this class.
-func (d *topicHistogram) getWordProb(word string) float64 {
+func (d *BayesData) getWordProb(word string) float64 {
 	value, ok := d.Freqs[word]
 	if !ok {
 		return defaultProb
 	}
-	return float64(value[0]) / float64(d.Total)
+	return float64(value) / float64(d.Total)
 }
 
 // getWordsProb returns P(D|C_j) -- the probability of seeing
@@ -105,7 +105,7 @@ func (d *topicHistogram) getWordProb(word string) float64 {
 // Note that words should not be empty, and this method of
 // calulation is prone to underflow if there are many words
 // and their individual probabilties are small.
-func (d *topicHistogram) getWordsProb(words []string) (prob float64) {
+func (d *BayesData) getWordsProb(words []string) (prob float64) {
 	prob = 1
 	for _, word := range words {
 		prob *= d.getWordProb(word)
@@ -135,10 +135,10 @@ func NewClassifier(classes ...Class) (c *Classifier) {
 	// create the classifier
 	c = &Classifier{
 		Classes: classes,
-		datas:   make(map[Class]*topicHistogram, n),
+		Datas:   make(map[Class]*BayesData, n),
 	}
 	for _, class := range classes {
-		c.datas[class] = newTopicHistogram()
+		c.Datas[class] = newTopicHistogram()
 	}
 	return
 }
@@ -173,7 +173,7 @@ func (c *Classifier) getPriors() (priors []float64) {
 	priors = make([]float64, n, n)
 	sum := 0
 	for index, class := range c.Classes {
-		total := c.datas[class].Total
+		total := c.Datas[class].Total
 		priors[index] = float64(total)
 		sum += total
 	}
@@ -187,14 +187,14 @@ func (c *Classifier) getPriors() (priors []float64) {
 
 // Learned returns the number of documents ever learned
 // in the lifetime of this classifier.
-func (c *Classifier) Learned() int {
-	return c.learned
+func (c *Classifier) TotalLearned() int {
+	return c.Learned
 }
 
 // Seen returns the number of documents ever classified
 // in the lifetime of this classifier.
-func (c *Classifier) Seen() int {
-	return c.seen
+func (c *Classifier) TotalSeen() int {
+	return c.Seen
 }
 
 // WordCount returns the number of words counted for
@@ -202,7 +202,7 @@ func (c *Classifier) Seen() int {
 func (c *Classifier) WordCount() (result []int) {
 	result = make([]int, len(c.Classes))
 	for inx, class := range c.Classes {
-		data := c.datas[class]
+		data := c.Datas[class]
 		result[inx] = data.Total
 	}
 	return
@@ -211,12 +211,12 @@ func (c *Classifier) WordCount() (result []int) {
 // Learn will accept new training documents for
 // supervised learning.
 func (c *Classifier) Learn(text []string, which Class) {
-	data := c.datas[which]
+	data := c.Datas[which]
 	for _, word := range text {
-		data.Freqs[word][0]++
+		data.Freqs[word]++
 		data.Total++
 	}
-	c.learned++
+	c.Learned++
 }
 
 // LogScores produces "log-likelihood"-like scores that can
@@ -245,7 +245,7 @@ func (c *Classifier) LogScores(document []string) (scores []float64, inx int, st
 
 	// calculate the score for each class
 	for index, class := range c.Classes {
-		data := c.datas[class]
+		data := c.Datas[class]
 		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := math.Log(priors[index])
@@ -255,7 +255,7 @@ func (c *Classifier) LogScores(document []string) (scores []float64, inx int, st
 		scores[index] = score
 	}
 	inx, strict = findMax(scores)
-	c.seen++
+	c.Seen++
 	return scores, inx, strict
 }
 
@@ -276,7 +276,7 @@ func (c *Classifier) ProbScores(doc []string) (scores []float64, inx int, strict
 	sum := float64(0)
 	// calculate the score for each class
 	for index, class := range c.Classes {
-		data := c.datas[class]
+		data := c.Datas[class]
 		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := priors[index]
@@ -290,7 +290,7 @@ func (c *Classifier) ProbScores(doc []string) (scores []float64, inx int, strict
 		scores[i] /= sum
 	}
 	inx, strict = findMax(scores)
-	c.seen++
+	c.Seen++
 	return scores, inx, strict
 }
 
@@ -313,7 +313,7 @@ func (c *Classifier) SafeProbScores(doc []string) (scores []float64, inx int, st
 	sum := float64(0)
 	// calculate the score for each class
 	for index, class := range c.Classes {
-		data := c.datas[class]
+		data := c.Datas[class]
 		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := priors[index]
@@ -339,7 +339,7 @@ func (c *Classifier) SafeProbScores(doc []string) (scores []float64, inx int, st
 	if inx != logInx || strict != logStrict {
 		err = errors.New("possible underflow detected")
 	}
-	c.seen++
+	c.Seen++
 	return scores, inx, strict, err
 }
 
@@ -356,7 +356,7 @@ func (c *Classifier) WordFrequencies(words []string) (freqMatrix [][]float64) {
 	freqMatrix = make([][]float64, n)
 	for i, _ := range freqMatrix {
 		arr := make([]float64, l)
-		data := c.datas[c.Classes[i]]
+		data := c.Datas[c.Classes[i]]
 		for j, _ := range arr {
 			arr[j] = data.getWordProb(words[j])
 		}
@@ -376,14 +376,14 @@ func (c *Classifier) WriteToFile(name string) (err error) {
 
 // WriteClassesToFile writes all classes to files.
 func (c *Classifier) WriteClassesToFile(rootPath string) (err error) {
-	for name, _ := range c.datas {
+	for name, _ := range c.Datas {
 		c.WriteClassToFile(name, rootPath)
 	}
 	return
 }
 
 func (c *Classifier) WriteClassToFile(name Class, rootPath string) (err error) {
-	data := c.datas[name]
+	data := c.Datas[name]
 	fileName := filepath.Join(rootPath, string(name))
 	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -397,7 +397,7 @@ func (c *Classifier) WriteClassToFile(name Class, rootPath string) (err error) {
 //Serialize this classifier to GOB and write to Writer
 func (c *Classifier) WriteTo(w io.Writer) (err error) {
 	enc := gob.NewEncoder(w)
-	err = enc.Encode(&serializableClassifier{c.Classes, c.learned, c.seen, c.datas})
+	err = enc.Encode(&serializableClassifier{c.Classes, c.Learned, c.Seen, c.Datas})
 	return
 }
 
@@ -412,10 +412,10 @@ func (c *Classifier) ReadClassFromFile(class Class, location string) (err error)
 	}
 
 	dec := gob.NewDecoder(file)
-	w := new(topicHistogram)
+	w := new(BayesData)
 	err = dec.Decode(w)
 
-	c.learned++
-	c.datas[class] = w
+	c.Learned++
+	c.Datas[class] = w
 	return
 }

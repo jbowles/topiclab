@@ -119,12 +119,12 @@ func TestSeenLearned(t *testing.T) {
 	scores, _, _, _ = c.SafeProbScores(doc2)
 	scores, _, _, _ = c.SafeProbScores(doc3)
 	println(scores)
-	Assert(t, c.Learned() == 2, "learned")
-	Assert(t, c.Seen() == 9, "seen")
+	Assert(t, c.TotalLearned() == 2, "learned")
+	Assert(t, c.TotalSeen() == 9, "seen")
 	count := c.WordCount()
 	Assert(t, count[0] == 3, "counted-good")
 	Assert(t, count[1] == 3, "counted-bad")
-	Assert(t, c.Learned() == 2, "learned")
+	Assert(t, c.TotalLearned() == 2, "learned")
 
 }
 
@@ -149,7 +149,7 @@ func TestInduceUnderflow(t *testing.T) {
 func TestLogScores(t *testing.T) {
 	c := NewClassifier(Good, Bad)
 	c.Learn([]string{"tall", "handsome", "rich"}, Good)
-	data := c.datas[Good]
+	data := c.Datas[Good]
 	Assert(t, data.Total == 3)
 	Assert(t, data.getWordProb("tall") == float64(1)/float64(3), "tall")
 	Assert(t, data.getWordProb("rich") == float64(1)/float64(3), "rich")
@@ -166,15 +166,15 @@ func TestGobs(t *testing.T) {
 	fmt.Printf("%v\n", d)
 	scores, _, _ := d.LogScores([]string{"a", "b", "c"})
 	println(scores)
-	data := d.datas[Good]
+	data := d.Datas[Good]
 	Assert(t, data.Total == 3)
 	Assert(t, data.getWordProb("tall") == float64(1)/float64(3), "tall")
 	Assert(t, data.getWordProb("rich") == float64(1)/float64(3), "rich")
-	Assert(t, d.Learned() == 1)
+	Assert(t, d.TotalLearned() == 1)
 	count := d.WordCount()
 	Assert(t, count[0] == 3)
 	Assert(t, count[1] == 0)
-	Assert(t, d.Seen() == 1)
+	Assert(t, d.TotalSeen() == 1)
 	// remove the file
 	err = os.Remove("test.ser")
 	Assert(t, err == nil, "could not remove test file:", err)
@@ -192,16 +192,16 @@ func TestClassByFile(t *testing.T) {
 	fmt.Printf("%v\n", d)
 	scores, _, _ := d.LogScores([]string{"a", "b", "c"})
 	println(scores)
-	data := d.datas[Good]
+	data := d.Datas[Good]
 	Assert(t, data.Total == 3)
 	Assert(t, data.getWordProb("tall") == float64(1)/float64(3), "tall")
 	Assert(t, data.getWordProb("rich") == float64(1)/float64(3), "rich")
-	Assert(t, d.Learned() == 1, "learned")
+	Assert(t, d.TotalLearned() == 1, "learned")
 	count := d.WordCount()
 
 	Assert(t, count[0] == 3)
 	Assert(t, count[1] == 0)
-	Assert(t, d.Seen() == 1)
+	Assert(t, d.TotalSeen() == 1)
 	// remove the file
 	err = os.Remove("good")
 	Assert(t, err == nil, "could not remove test file:", err)

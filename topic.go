@@ -1,12 +1,13 @@
 package topiclab
 
 // defaultProb is the tiny smoothing non-zero probability that a word
-// we have not seen before appears in the class.
+// we have not Seen before appears in the class.
 const defaultProb = 0.00000000001
 
 type Class string
 type Distribution []float64
 type Histogram []int
+type FreqCount int
 type Corpus []*Document
 
 type Sampler struct {
@@ -32,9 +33,9 @@ type Document struct {
 // Classifier implements the Naive Bayesian Classifier.
 type Classifier struct {
 	Classes []Class
-	learned int // docs learned
-	seen    int // docs seen
-	datas   map[Class]*topicHistogram
+	Learned int // docs Learned
+	Seen    int // docs Seen
+	Datas   map[Class]*BayesData
 	//datas   map[Class]*classData
 }
 
@@ -45,7 +46,7 @@ type serializableClassifier struct {
 	Classes []Class
 	Learned int
 	Seen    int
-	Datas   map[Class]*topicHistogram
+	Datas   map[Class]*BayesData
 }
 
 // topicHistogram holds the frequency data for words in a
@@ -53,8 +54,8 @@ type serializableClassifier struct {
 // structure with a trie-like structure for more
 // efficient storage.
 //classData
-type topicHistogram struct {
-	Freqs map[string]Histogram
+type BayesData struct {
+	Freqs map[string]FreqCount
 	Total int
 }
 
