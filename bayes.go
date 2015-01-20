@@ -1,5 +1,5 @@
 /*
-  Refactored version of:
+  Refactored version of: https://github.com/jbrukh/bayesian
 
  A Naive Bayesian Classifier
  Jake Brukhman <jbrukh@gmail.com>
@@ -83,7 +83,7 @@ func findMax(scores []float64) (inx int, strict bool) {
 }
 
 // newClassData creates a new empty classData node.
-func newTopicHistogram() *BayesData {
+func newBayesData() *BayesData {
 	return &BayesData{
 		Freqs: make(map[string]FreqCount),
 	}
@@ -138,7 +138,7 @@ func NewClassifier(classes ...Class) (c *Classifier) {
 		Datas:   make(map[Class]*BayesData, n),
 	}
 	for _, class := range classes {
-		c.Datas[class] = newTopicHistogram()
+		c.Datas[class] = newBayesData()
 	}
 	return
 }
@@ -238,8 +238,9 @@ func (c *Classifier) Learn(text []string, which Class) {
 //
 // Unlike c.Probabilities(), this function is not prone to
 // floating point underflow and is relatively safe to use.
-func (c *Classifier) LogScores(document []string) (scores []float64, inx int, strict bool) {
+func (c *Classifier) LogScores(document []string) (scores []float64, class Class, strict bool) {
 	n := len(c.Classes)
+	var idx int
 	scores = make([]float64, n, n)
 	priors := c.getPriors()
 
@@ -254,9 +255,9 @@ func (c *Classifier) LogScores(document []string) (scores []float64, inx int, st
 		}
 		scores[index] = score
 	}
-	inx, strict = findMax(scores)
+	idx, strict = findMax(scores)
 	c.Seen++
-	return scores, inx, strict
+	return scores, c.Classes[idx], strict
 }
 
 // ProbScores works the same as LogScores, but delivers
