@@ -238,7 +238,7 @@ func (c *Classifier) Learn(text []string, which Class) {
 //
 // Unlike c.Probabilities(), this function is not prone to
 // floating point underflow and is relatively safe to use.
-func (c *Classifier) LogScores(document []string) (scores []float64, class Class, strict bool) {
+func (c *Classifier) LogScores(document []string) (scores []float64, inx int, strict bool) {
 	n := len(c.Classes)
 	var idx int
 	scores = make([]float64, n, n)
@@ -257,7 +257,7 @@ func (c *Classifier) LogScores(document []string) (scores []float64, class Class
 	}
 	idx, strict = findMax(scores)
 	c.Seen++
-	return scores, c.Classes[idx], strict
+	return scores, idx, strict
 }
 
 // ProbScores works the same as LogScores, but delivers
